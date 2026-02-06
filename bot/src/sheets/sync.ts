@@ -6,21 +6,25 @@ let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
 function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
-  if (!config.google.serviceAccountKey || !config.google.sheetId) return null;
+  if (!config.google.sheetId) return null;
 
   try {
-    const credentials = JSON.parse(config.google.serviceAccountKey);
     const auth = new google.auth.GoogleAuth({
-      credentials,
       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
-    sheetsClient = google.sheets({ version: "v4", auth });
+
+    sheetsClient = google.sheets({
+      version: "v4",
+      auth,
+    });
+
     return sheetsClient;
   } catch (err) {
     console.warn("Google Sheets not configured:", (err as Error).message);
     return null;
   }
 }
+
 
 export async function syncTicketToSheet(ticketId: string): Promise<boolean> {
   const sheets = getSheetsClient();
