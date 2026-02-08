@@ -1,52 +1,58 @@
-import { Message, Attachment } from "discord.js";
-
 const URL_REGEX = /https?:\/\/[^\s<>]+/g;
 
 export interface TranscriptSource {
   url: string;
   html: string;
-  source: "attachment" | "url";
+}
+
+interface DiscordAttachment {
+  id: string;
+  filename: string;
+  url: string;
+  content_type?: string;
+}
+
+interface DiscordMessage {
+  id: string;
+  content: string;
+  attachments: DiscordAttachment[];
+  embeds: { url?: string }[];
+  timestamp: string;
+  author: { id: string; username: string; bot?: boolean };
 }
 
 /**
- * Extract transcript HTML from a Discord message.
- * Priority: 1) HTML attachment, 2) URL in message content
+ * Extract and fetch transcript HTML from a Discord REST API message object.
  */
-export async function fetchTranscript(message: Message): Promise<TranscriptSource | null> {
+export async function fetchTranscript(message: DiscordMessage): Promise<TranscriptSource | null> {
   // 1. Check for HTML file attachments
   const htmlAttachment = message.attachments.find(
-    (a: Attachment) => a.name?.endsWith(".html") || a.contentType?.includes("text/html")
+    (a) => a.filename?.endsWith(".html") || a.content_type?.includes("text/html")
   );
 
   if (htmlAttachment) {
-    console.log(`  Found HTML attachment: ${htmlAttachment.name}`);
     const html = await fetchWithRetry(htmlAttachment.url);
     if (html) {
-      return { url: htmlAttachment.url, html, source: "attachment" };
+      return { url: htmlAttachment.url, html };
     }
   }
 
   // 2. Extract URLs from message content
   const urls = message.content.match(URL_REGEX) || [];
   for (const url of urls) {
-    // Skip non-transcript URLs
     if (!looksLikeTranscript(url)) continue;
-
-    console.log(`  Trying transcript URL: ${url}`);
     const html = await fetchWithRetry(url);
     if (html && html.includes("<")) {
-      return { url, html, source: "url" };
+      return { url, html };
     }
   }
 
-  // 3. Check embeds for URLs
+  // 3. Check embeds
   for (const embed of message.embeds) {
-    const embedUrl = embed.url;
-    if (embedUrl && looksLikeTranscript(embedUrl)) {
-      console.log(`  Trying embed URL: ${embedUrl}`);
-      const html = await fetchWithRetry(embedUrl);
+    if (embed.url && looksLikeTranscript(embed.url)) {
+      const html = await fetchWithRetry(embed.url);
       if (html && html.includes("<")) {
-        return { url: embedUrl, html, source: "url" };
+        return { url: embed.url, html };
       }
     }
   }
@@ -77,9 +83,8 @@ async function fetchWithRetry(url: string, retries = 2): Promise<string | null> 
         signal: AbortSignal.timeout(15_000),
       });
       if (resp.ok) return await resp.text();
-      console.warn(`  Fetch ${url} returned ${resp.status}`);
-    } catch (err) {
-      console.warn(`  Fetch attempt ${i + 1} failed for ${url}:`, (err as Error).message);
+    } catch {
+      // retry
     }
     if (i < retries) await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
   }

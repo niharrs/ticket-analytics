@@ -25,7 +25,6 @@ CREATE TABLE tickets (
   ticket_closed_at TIMESTAMPTZ,
   discord_posted_at TIMESTAMPTZ,
   processed_at TIMESTAMPTZ,
-  sheets_synced_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

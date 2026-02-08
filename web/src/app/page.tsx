@@ -3,7 +3,10 @@ import TicketFeed from "@/components/TicketFeed";
 export default function HomePage() {
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-white">Ticket Feed</h1>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight gradient-text">Tickets</h1>
+        <p className="mt-1 text-sm text-gray-500">Monitor and analyze support ticket transcripts</p>
+      </div>
       <TicketFeed />
     </div>
   );

@@ -36,10 +36,10 @@ export default function Filters({
   }
 
   const selectClass =
-    "rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-200 focus:border-blue-500 focus:outline-none";
+    "appearance-none rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[13px] text-gray-300 outline-none transition-all hover:bg-white/[0.05] focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/20 cursor-pointer";
 
   return (
-    <div className="mb-6 flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-2">
       <select
         className={selectClass}
         value={filters.category}
@@ -72,7 +72,7 @@ export default function Filters({
       >
         <option value="">All Status</option>
         <option value="true">Resolved</option>
-        <option value="false">Unresolved</option>
+        <option value="false">Open</option>
       </select>
 
       <select
@@ -80,9 +80,9 @@ export default function Filters({
         value={filters.days}
         onChange={(e) => update("days", e.target.value)}
       >
-        <option value="7">Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="90">Last 90 days</option>
+        <option value="7">7 days</option>
+        <option value="30">30 days</option>
+        <option value="90">90 days</option>
         <option value="">All time</option>
       </select>
     </div>

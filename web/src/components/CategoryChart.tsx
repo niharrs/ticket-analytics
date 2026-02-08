@@ -16,33 +16,42 @@ interface CategoryData {
 }
 
 const COLORS = [
-  "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981",
-  "#06b6d4", "#f97316", "#6366f1", "#14b8a6", "#e11d48",
+  "#818cf8", "#a78bfa", "#f472b6", "#fbbf24", "#34d399",
+  "#22d3ee", "#fb923c", "#818cf8", "#2dd4bf", "#fb7185",
 ];
+
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-white/[0.08] bg-[#1a1a25] px-3 py-2 shadow-xl">
+      <p className="text-[12px] font-medium text-gray-200">{label}</p>
+      <p className="text-[12px] text-gray-400">{payload[0].value} tickets</p>
+    </div>
+  );
+};
 
 export default function CategoryChart({ data }: { data: CategoryData[] }) {
   if (data.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-      <h3 className="mb-4 text-sm font-medium text-gray-300">Tickets by Category</h3>
+    <div className="glass-card rounded-xl p-5">
+      <h3 className="mb-1 text-[14px] font-semibold text-gray-200">By Category</h3>
+      <p className="mb-5 text-[12px] text-gray-500">Ticket distribution across categories</p>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} layout="vertical" margin={{ left: 120 }}>
-          <XAxis type="number" stroke="#6b7280" fontSize={12} />
+        <BarChart data={data} layout="vertical" margin={{ left: 10, right: 16 }}>
+          <XAxis type="number" stroke="#2a2a3e" fontSize={11} tick={{ fill: "#6b7280" }} axisLine={false} />
           <YAxis
             type="category"
             dataKey="name"
-            stroke="#6b7280"
-            fontSize={12}
-            width={110}
+            stroke="transparent"
+            fontSize={11}
+            tick={{ fill: "#9ca3af" }}
+            width={120}
           />
-          <Tooltip
-            contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px" }}
-            labelStyle={{ color: "#e5e7eb" }}
-          />
-          <Bar dataKey="ticket_count" radius={[0, 4, 4, 0]}>
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.02)" }} />
+          <Bar dataKey="ticket_count" radius={[0, 6, 6, 0]} barSize={20}>
             {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.8} />
             ))}
           </Bar>
         </BarChart>

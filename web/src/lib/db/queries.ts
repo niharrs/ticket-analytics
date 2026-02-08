@@ -1,8 +1,9 @@
-import { supabase } from "./supabase.js";
-import type { AiAnalysis } from "../ai/categorize.js";
-import type { ParsedTranscript } from "../scraper/parser.js";
+import { createServerClient } from "../supabase/server";
+import type { AiAnalysis } from "../ai/categorize";
+import type { ParsedTranscript } from "../scraper/parser";
 
 export async function getExistingCategories() {
+  const supabase = createServerClient();
   const { data, error } = await supabase
     .from("categories")
     .select("id, name, description")
@@ -12,6 +13,7 @@ export async function getExistingCategories() {
 }
 
 export async function ticketExists(discordMessageId: string): Promise<boolean> {
+  const supabase = createServerClient();
   const { data } = await supabase
     .from("tickets")
     .select("id")
@@ -25,11 +27,11 @@ export async function upsertTicket(params: {
   transcriptUrl: string | null;
   parsed: ParsedTranscript;
   analysis: AiAnalysis;
-  discordPostedAt: Date;
+  discordPostedAt: string;
 }) {
+  const supabase = createServerClient();
   const { discordMessageId, transcriptUrl, parsed, analysis, discordPostedAt } = params;
 
-  // 1. Insert/update the ticket
   const { data: ticket, error: ticketError } = await supabase
     .from("tickets")
     .upsert(
@@ -45,7 +47,7 @@ export async function upsertTicket(params: {
         message_count: parsed.messageCount,
         ticket_opened_at: parsed.openedAt,
         ticket_closed_at: parsed.closedAt,
-        discord_posted_at: discordPostedAt.toISOString(),
+        discord_posted_at: discordPostedAt,
         processed_at: new Date().toISOString(),
       },
       { onConflict: "discord_message_id" }
@@ -56,48 +58,39 @@ export async function upsertTicket(params: {
   if (ticketError) throw ticketError;
   const ticketId = ticket.id;
 
-  // 2. Handle new category if suggested
+  // Handle new category
   if (analysis.newCategory) {
-    const { error: catError } = await supabase
+    await supabase
       .from("categories")
       .upsert(
-        {
-          name: analysis.newCategory.name,
-          description: analysis.newCategory.description,
-          auto_created: true,
-        },
+        { name: analysis.newCategory.name, description: analysis.newCategory.description, auto_created: true },
         { onConflict: "name" }
       );
-    if (catError) console.warn("Failed to create new category:", catError.message);
   }
 
-  // 3. Link categories
+  // Link categories
   const categories = await getExistingCategories();
   const categoryIds = analysis.categories
     .map((name) => categories.find((c) => c.name.toLowerCase() === name.toLowerCase())?.id)
     .filter(Boolean) as string[];
 
   if (categoryIds.length > 0) {
-    // Clear existing links and re-insert
     await supabase.from("ticket_categories").delete().eq("ticket_id", ticketId);
-    const { error: linkError } = await supabase
+    await supabase
       .from("ticket_categories")
       .insert(categoryIds.map((cid) => ({ ticket_id: ticketId, category_id: cid })));
-    if (linkError) console.warn("Failed to link categories:", linkError.message);
   }
 
-  // 4. Insert insights
+  // Insert insights
   if (analysis.insights.length > 0) {
-    // Clear existing insights for this ticket and re-insert
     await supabase.from("insights").delete().eq("ticket_id", ticketId);
-    const { error: insightError } = await supabase.from("insights").insert(
+    await supabase.from("insights").insert(
       analysis.insights.map((i) => ({
         ticket_id: ticketId,
         insight_text: i.text,
         insight_type: i.type,
       }))
     );
-    if (insightError) console.warn("Failed to insert insights:", insightError.message);
   }
 
   return ticketId;

@@ -1,17 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { config } from "../config.js";
-import { buildCategorizationPrompt } from "./prompts.js";
+import { buildCategorizationPrompt } from "./prompts";
 
-const anthropic = new Anthropic({ apiKey: config.anthropic.apiKey });
-
-export interface CategorySuggestion {
-  name: string;
-  description: string;
-}
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export interface AiAnalysis {
   categories: string[];
-  newCategory: CategorySuggestion | null;
+  newCategory: { name: string; description: string } | null;
   summary: string;
   severity: "low" | "medium" | "high" | "critical";
   resolved: boolean;
@@ -33,13 +27,9 @@ export async function analyzeTranscript(
 
   const text = response.content
     .filter((block) => block.type === "text")
-    .map((block) => {
-      if (block.type === "text") return block.text;
-      return "";
-    })
+    .map((block) => (block.type === "text" ? block.text : ""))
     .join("");
 
-  // Parse JSON from response, stripping any markdown fences
   const cleaned = text.replace(/```json?\s*/g, "").replace(/```\s*/g, "").trim();
   const parsed = JSON.parse(cleaned);
 
